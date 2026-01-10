@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear System Solver</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .equation-input {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .equation-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+            font-size: 18px;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .settings {
+            margin: 20px 0;
+            padding: 20px;
+            background: #e8f4f8;
+            border-radius: 8px;
+        }
+        .setting-group {
+            margin-bottom: 20px;
+        }
+        .setting-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        .radio-group input[type="radio"] {
+            margin-right: 5px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            border: none;
+        }
+        .precision-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+            min-width: 60px;
+            text-align: center;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .results.show {
+            display: block;
+        }
+        .result-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .result-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .result-row:last-child {
+            border-bottom: none;
+        }
+        .result-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .result-value {
+            color: #2c3e50;
+            font-family: 'Courier New', monospace;
+        }
+        .error-high {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .error-medium {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .error-low {
+            color: #27ae60;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="equation-input">
+            <div class="equation-row">
+                <input type="number" id="a11" value="0.1036" step="any"> x + 
+                <input type="number" id="a12" value="0.2122" step="any"> y = 
+                <input type="number" id="b1" value="0.7381" step="any">
+            </div>
+            <div class="equation-row">
+                <input type="number" id="a21" value="0.2081" step="any"> x + 
+                <input type="number" id="a22" value="0.4247" step="any"> y = 
+                <input type="number" id="b2" value="0.9327" step="any">
+            </div>
+        </div>
+
+        <div class="settings">
+            <div class="setting-group">
+                <label>Floating-Point Approximation Method:</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="method" value="chopping">
+                        Chopping
+                    </label>
+                    <label>
+                        <input type="radio" name="method" value="rounding" checked>
+                        Rounding
+                    </label>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label>Elimination Strategy:</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="elimination" value="eliminate_x" checked>
+                        Eliminate x first
+                    </label>
+                    <label>
+                        <input type="radio" name="elimination" value="eliminate_y">
+                        Eliminate y first
+                    </label>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label>Precision (Significant Digits):</label>
+                <div class="slider-container">
+                    <span>1 digit</span>
+                    <input type="range" id="precision" min="1" max="10" value="3">
+                    <span>10 digits</span>
+                    <div class="precision-value" id="precisionValue">3</div>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="solve()">Calculate</button>
+
+        <div class="results" id="results">
+            <div class="result-section">
+                <h3>Exact Solution</h3>
+                <div class="result-row">
+                    <span class="result-label">x =</span>
+                    <span class="result-value" id="exactX"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">y =</span>
+                    <span class="result-value" id="exactY"></span>
+                </div>
+            </div>
+
+            <div class="result-section">
+                <h3>Approximate Solution</h3>
+                <div class="result-row">
+                    <span class="result-label">x ≈</span>
+                    <span class="result-value" id="approxX"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">y ≈</span>
+                    <span class="result-value" id="approxY"></span>
+                </div>
+            </div>
+
+            <div class="result-section">
+                <h3>Error Analysis</h3>
+                <div class="result-row">
+                    <span class="result-label">Absolute Error (x):</span>
+                    <span class="result-value" id="absErrorX"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Relative Error (x):</span>
+                    <span class="result-value" id="relErrorX"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Absolute Error (y):</span>
+                    <span class="result-value" id="absErrorY"></span>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Relative Error (y):</span>
+                    <span class="result-value" id="relErrorY"></span>
+                </div>
+            </div>
+
+            <div class="result-section">
+                <h3>Debug: Computation Steps</h3>
+                <div id="debugSteps" style="font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const precisionSlider = document.getElementById('precision');
+        const precisionValue = document.getElementById('precisionValue');
+
+        precisionSlider.addEventListener('input', function() {
+            precisionValue.textContent = this.value;
+        });
+
+        function applyPrecision(num, precision, method) {
+            if (num === 0) return 0;
+            
+            const sign = Math.sign(num);
+            const absNum = Math.abs(num);
+            
+            // Get the order of magnitude
+            const exponent = Math.floor(Math.log10(absNum));
+            const mantissa = absNum / Math.pow(10, exponent);
+            
+            // Apply precision to mantissa
+            const factor = Math.pow(10, precision - 1);
+            
+            let truncated;
+            if (method === 'chopping') {
+                truncated = Math.floor(mantissa * factor) / factor;
+            } else {
+                truncated = Math.round(mantissa * factor) / factor;
+            }
+            
+            const result = sign * truncated * Math.pow(10, exponent);
+            
+            // Format to show correct number of significant figures
+            // This ensures trailing zeros are preserved (e.g., 0.0980 not 0.098)
+            return parseFloat(result.toPrecision(precision));
+        }
+
+        function solve() {
+            const a11 = parseFloat(document.getElementById('a11').value);
+            const a12 = parseFloat(document.getElementById('a12').value);
+            const b1 = parseFloat(document.getElementById('b1').value);
+            const a21 = parseFloat(document.getElementById('a21').value);
+            const a22 = parseFloat(document.getElementById('a22').value);
+            const b2 = parseFloat(document.getElementById('b2').value);
+            
+            const precision = parseInt(precisionSlider.value);
+            const method = document.querySelector('input[name="method"]:checked').value;
+            const elimination = document.querySelector('input[name="elimination"]:checked').value;
+
+            let debugLog = '';
+            debugLog += '=== EXACT SOLUTION (Full Precision) ===\n';
+            debugLog += 'Using Cramer\'s Rule\n\n';
+            
+            const det = a11 * a22 - a12 * a21;
+            debugLog += `det = ${a11} * ${a22} - ${a12} * ${a21}\n`;
+            debugLog += `det = ${a11 * a22} - ${a12 * a21}\n`;
+            debugLog += `det = ${det}\n\n`;
+            
+            if (Math.abs(det) < 1e-10) {
+                alert('The system has no unique solution (determinant is zero)');
+                return;
+            }
+
+            const exactX = (b1 * a22 - b2 * a12) / det;
+            const exactY = (a11 * b2 - a21 * b1) / det;
+            
+            debugLog += `x = (${b1} * ${a22} - ${b2} * ${a12}) / ${det}\n`;
+            debugLog += `x = ${exactX}\n\n`;
+            debugLog += `y = (${a11} * ${b2} - ${a21} * ${b1}) / ${det}\n`;
+            debugLog += `y = ${exactY}\n\n`;
+
+            debugLog += '=== APPROXIMATE SOLUTION (Limited Precision) ===\n';
+            debugLog += `Method: ${method}, Precision: ${precision} digits\n`;
+            debugLog += `Elimination Strategy: ${elimination === 'eliminate_x' ? 'Eliminate x first' : 'Eliminate y first'}\n`;
+            debugLog += 'Using Gaussian Elimination\n\n';
+
+            // Apply precision to initial coefficients
+            let a11_p = applyPrecision(a11, precision, method);
+            let a12_p = applyPrecision(a12, precision, method);
+            let b1_p = applyPrecision(b1, precision, method);
+            let a21_p = applyPrecision(a21, precision, method);
+            let a22_p = applyPrecision(a22, precision, method);
+            let b2_p = applyPrecision(b2, precision, method);
+
+            debugLog += 'Initial coefficients after rounding:\n';
+            debugLog += `a11: ${a11} → ${a11_p}\n`;
+            debugLog += `a12: ${a12} → ${a12_p}\n`;
+            debugLog += `a21: ${a21} → ${a21_p}\n`;
+            debugLog += `a22: ${a22} → ${a22_p}\n`;
+            debugLog += `b1: ${b1} → ${b1_p}\n`;
+            debugLog += `b2: ${b2} → ${b2_p}\n\n`;
+
+            debugLog += 'Equation (1): ' + a11_p + 'x + ' + a12_p + 'y = ' + b1_p + '\n';
+            debugLog += 'Equation (2): ' + a21_p + 'x + ' + a22_p + 'y = ' + b2_p + '\n\n';
+
+            let approxX, approxY;
+
+            if (elimination === 'eliminate_x') {
+                // Eliminate x from equation 2
+                debugLog += 'Step 1: Eliminate x from equation (2)\n';
+                
+                const multiplier = applyPrecision(a21_p / a11_p, precision, method);
+                debugLog += `Multiplier m = a21/a11 = ${a21_p}/${a11_p} = ${a21_p/a11_p} → ${multiplier}\n\n`;
+
+                debugLog += `Compute: Equation(2) - m * Equation(1)\n\n`;
+
+                // New coefficients
+                const new_a21_temp = applyPrecision(multiplier * a11_p, precision, method);
+                const new_a21 = applyPrecision(a21_p - new_a21_temp, precision, method);
+                debugLog += `New a21 = ${a21_p} - ${multiplier} * ${a11_p}\n`;
+                debugLog += `        = ${a21_p} - ${new_a21_temp}\n`;
+                debugLog += `        = ${a21_p - new_a21_temp} → ${new_a21}\n\n`;
+
+                const mult_a12 = applyPrecision(multiplier * a12_p, precision, method);
+                const new_a22 = applyPrecision(a22_p - mult_a12, precision, method);
+                debugLog += `New a22 = ${a22_p} - ${multiplier} * ${a12_p}\n`;
+                debugLog += `        = ${a22_p} - ${mult_a12}\n`;
+                debugLog += `        = ${a22_p - mult_a12} → ${new_a22}\n\n`;
+
+                const mult_b1 = applyPrecision(multiplier * b1_p, precision, method);
+                const new_b2 = applyPrecision(b2_p - mult_b1, precision, method);
+                debugLog += `New b2 = ${b2_p} - ${multiplier} * ${b1_p}\n`;
+                debugLog += `       = ${b2_p} - ${mult_b1}\n`;
+                debugLog += `       = ${b2_p - mult_b1} → ${new_b2}\n\n`;
+
+                debugLog += 'After elimination:\n';
+                debugLog += `Equation (1): ${a11_p}x + ${a12_p}y = ${b1_p}\n`;
+                debugLog += `Equation (2): ${new_a21}x + ${new_a22}y = ${new_b2}\n\n`;
+
+                if (Math.abs(new_a22) < 1e-10) {
+                    alert('The system has no unique solution with approximated values');
+                    return;
+                }
+
+                // Back substitution: solve for y
+                debugLog += 'Step 2: Back substitution\n';
+                approxY = applyPrecision(new_b2 / new_a22, precision, method);
+                debugLog += `Solve for y from equation (2):\n`;
+                debugLog += `${new_a22}y = ${new_b2}\n`;
+                debugLog += `y = ${new_b2}/${new_a22} = ${new_b2/new_a22} → ${approxY}\n\n`;
+
+                // Solve for x
+                const temp1 = applyPrecision(a12_p * approxY, precision, method);
+                const temp2 = applyPrecision(b1_p - temp1, precision, method);
+                approxX = applyPrecision(temp2 / a11_p, precision, method);
+                
+                debugLog += `Solve for x from equation (1):\n`;
+                debugLog += `${a11_p}x + ${a12_p} * ${approxY} = ${b1_p}\n`;
+                debugLog += `${a11_p}x + ${temp1} = ${b1_p}\n`;
+                debugLog += `${a11_p}x = ${b1_p} - ${temp1} = ${temp2}\n`;
+                debugLog += `x = ${temp2}/${a11_p} = ${temp2/a11_p} → ${approxX}\n\n`;
+                
+            } else {
+                // Eliminate y from equation 2
+                debugLog += 'Step 1: Eliminate y from equation (2)\n';
+                
+                const multiplier = applyPrecision(a22_p / a12_p, precision, method);
+                debugLog += `Multiplier m = a22/a12 = ${a22_p}/${a12_p} = ${a22_p/a12_p} → ${multiplier}\n\n`;
+
+                debugLog += `Compute: Equation(2) - m * Equation(1)\n\n`;
+
+                // New coefficients
+                const mult_a11 = applyPrecision(multiplier * a11_p, precision, method);
+                const new_a21 = applyPrecision(a21_p - mult_a11, precision, method);
+                debugLog += `New a21 = ${a21_p} - ${multiplier} * ${a11_p}\n`;
+                debugLog += `        = ${a21_p} - ${mult_a11}\n`;
+                debugLog += `        = ${a21_p - mult_a11} → ${new_a21}\n\n`;
+
+                const new_a22_temp = applyPrecision(multiplier * a12_p, precision, method);
+                const new_a22 = applyPrecision(a22_p - new_a22_temp, precision, method);
+                debugLog += `New a22 = ${a22_p} - ${multiplier} * ${a12_p}\n`;
+                debugLog += `        = ${a22_p} - ${new_a22_temp}\n`;
+                debugLog += `        = ${a22_p - new_a22_temp} → ${new_a22}\n\n`;
+
+                const mult_b1 = applyPrecision(multiplier * b1_p, precision, method);
+                const new_b2 = applyPrecision(b2_p - mult_b1, precision, method);
+                debugLog += `New b2 = ${b2_p} - ${multiplier} * ${b1_p}\n`;
+                debugLog += `       = ${b2_p} - ${mult_b1}\n`;
+                debugLog += `       = ${b2_p - mult_b1} → ${new_b2}\n\n`;
+
+                debugLog += 'After elimination:\n';
+                debugLog += `Equation (1): ${a11_p}x + ${a12_p}y = ${b1_p}\n`;
+                debugLog += `Equation (2): ${new_a21}x + ${new_a22}y = ${new_b2}\n\n`;
+
+                if (Math.abs(new_a21) < 1e-10) {
+                    alert('The system has no unique solution with approximated values');
+                    return;
+                }
+
+                // Back substitution: solve for x
+                debugLog += 'Step 2: Back substitution\n';
+                approxX = applyPrecision(new_b2 / new_a21, precision, method);
+                debugLog += `Solve for x from equation (2):\n`;
+                debugLog += `${new_a21}x = ${new_b2}\n`;
+                debugLog += `x = ${new_b2}/${new_a21} = ${new_b2/new_a21} → ${approxX}\n\n`;
+
+                // Solve for y
+                const temp1 = applyPrecision(a11_p * approxX, precision, method);
+                const temp2 = applyPrecision(b1_p - temp1, precision, method);
+                approxY = applyPrecision(temp2 / a12_p, precision, method);
+                
+                debugLog += `Solve for y from equation (1):\n`;
+                debugLog += `${a11_p}x + ${a12_p}y = ${b1_p}\n`;
+                debugLog += `${temp1} + ${a12_p}y = ${b1_p}\n`;
+                debugLog += `${a12_p}y = ${b1_p} - ${temp1} = ${temp2}\n`;
+                debugLog += `y = ${temp2}/${a12_p} = ${temp2/a12_p} → ${approxY}\n\n`;
+            }
+
+            const absErrorX = Math.abs(exactX - approxX);
+            const absErrorY = Math.abs(exactY - approxY);
+            const relErrorX = exactX !== 0 ? Math.abs(absErrorX / exactX) * 100 : 0;
+            const relErrorY = exactY !== 0 ? Math.abs(absErrorY / exactY) * 100 : 0;
+
+            document.getElementById('exactX').textContent = exactX.toFixed(10);
+            document.getElementById('exactY').textContent = exactY.toFixed(10);
+            document.getElementById('approxX').textContent = approxX.toFixed(10);
+            document.getElementById('approxY').textContent = approxY.toFixed(10);
+            
+            document.getElementById('absErrorX').textContent = absErrorX.toExponential(4);
+            document.getElementById('absErrorY').textContent = absErrorY.toExponential(4);
+            
+            const relErrorXElem = document.getElementById('relErrorX');
+            const relErrorYElem = document.getElementById('relErrorY');
+            
+            relErrorXElem.textContent = relErrorX.toFixed(4) + '%';
+            relErrorYElem.textContent = relErrorY.toFixed(4) + '%';
+            
+            relErrorXElem.className = 'result-value ' + getErrorClass(relErrorX);
+            relErrorYElem.className = 'result-value ' + getErrorClass(relErrorY);
+
+            document.getElementById('debugSteps').textContent = debugLog;
+            document.getElementById('results').classList.add('show');
+        }
+
+        function getErrorClass(errorPercent) {
+            if (errorPercent > 10) return 'error-high';
+            if (errorPercent > 1) return 'error-medium';
+            return 'error-low';
+        }
+    </script>
+</body>
+</html>
