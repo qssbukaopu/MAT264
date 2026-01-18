@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catastrophic Cancellation in Quadratic Roots</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #EBF4FF 0%, #E0E7FF 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .header svg {
+            width: 32px;
+            height: 32px;
+            color: #4F46E5;
+        }
+        h1 {
+            font-size: 28px;
+            color: #1F2937;
+        }
+        h2 {
+            font-size: 20px;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+        h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .card {
+            background: white;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .formula-box {
+            background: #F9FAFB;
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .formula-box p {
+            margin-bottom: 12px;
+        }
+        .formula-box strong {
+            color: #1F2937;
+        }
+        .formulas {
+            margin-left: 16px;
+            margin-top: 8px;
+        }
+        .formulas span {
+            display: inline-block;
+            margin-right: 24px;
+        }
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+        .input-group input[type="number"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .input-group input[type="number"]:focus {
+            outline: none;
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .input-group input[type="range"] {
+            width: 100%;
+        }
+        .precision-value {
+            text-align: center;
+            font-weight: 600;
+            color: #4F46E5;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .note-box {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #1E3A8A;
+        }
+        .checkbox-container {
+            background: #EEF2FF;
+            border: 1px solid #C7D2FE;
+            border-radius: 6px;
+            padding: 16px;
+        }
+        .checkbox-container h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #3730A3;
+            margin-bottom: 12px;
+        }
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        .checkbox-item label {
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+        }
+        .result-card {
+            border: 2px solid;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .result-card.green {
+            background: #F0FDF4;
+            border-color: #86EFAC;
+        }
+        .result-card.green h3 {
+            color: #166534;
+        }
+        .result-card.blue {
+            background: #EFF6FF;
+            border-color: #93C5FD;
+        }
+        .result-card.blue h3 {
+            color: #1E3A8A;
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .result-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .result-item .formula {
+            font-size: 12px;
+            color: #1E3A8A;
+            margin-bottom: 6px;
+        }
+        .result-value {
+            margin-bottom: 4px;
+        }
+        .result-value .label {
+            color: #6B7280;
+        }
+        .result-value .value {
+            font-weight: 600;
+        }
+        .result-value .value.green { color: #16A34A; }
+        .result-value .value.blue { color: #2563EB; }
+        .error-good { color: #16A34A; font-weight: 700; }
+        .error-ok { color: #CA8A04; font-weight: 700; }
+        .error-warning { color: #EA580C; font-weight: 700; }
+        .error-bad { color: #DC2626; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <h1>Catastrophic Cancellation in Quadratic Roots</h1>
+        </div>
+
+        <div class="card">
+            <h2>Quadratic Equation: ax² + bx + c = 0</h2>
+            
+            <div class="formula-box">
+                <p>Given the existence of the real solution(s) for a quadratic equation, one can solve it by:</p>
+                <div style="margin-left: 16px;">
+                    <div style="margin-bottom: 12px;">
+                        <strong>Either applying the quadratic formula directly:</strong>
+                        <div class="formulas">
+                            <span>x₁ = (-b + √(b²-4ac)) / 2a</span>
+                            <span>x₂ = (-b - √(b²-4ac)) / 2a</span>
+                        </div>
+                    </div>
+                    <div>
+                        <strong>Or applying the rationalization of the quadratic formula:</strong>
+                        <div class="formulas">
+                            <span>x₁ = 2c / (-b - √(b²-4ac))</span>
+                            <span>x₂ = 2c / (-b + √(b²-4ac))</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-grid">
+                <div class="input-group">
+                    <label>Coefficient a</label>
+                    <input type="number" id="coef-a" value="1" step="any">
+                </div>
+                <div class="input-group">
+                    <label>Coefficient b</label>
+                    <input type="number" id="coef-b" value="62.10" step="any">
+                </div>
+                <div class="input-group">
+                    <label>Coefficient c</label>
+                    <input type="number" id="coef-c" value="1" step="any">
+                </div>
+                <div class="input-group">
+                    <label>Precision (digits)</label>
+                    <input type="range" id="precision" min="1" max="10" value="4">
+                    <div class="precision-value" id="precision-value">4</div>
+                </div>
+            </div>
+
+            <div class="note-box">
+                <strong>Experiment and Observe:</strong> Choose the appropriate method (by toggling the rationalization 
+                checkboxes or not) for each root to minimize numerical error. Recall that when b² is large compared to 4ac, 
+                subtracting nearly equal numbers creates catastrophic cancellation. The rationalization can avoid this by 
+                eliminating the subtraction of nearly equal numbers -- but be careful to which root you should apply it!
+            </div>
+
+            <div class="checkbox-container">
+                <h3>Choose Method for Each Root:</h3>
+                <div class="checkbox-grid">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rational-x1">
+                        <label for="rational-x1">Use rationalized formula for <strong>x₁</strong></label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="rational-x2">
+                        <label for="rational-x2">Use rationalized formula for <strong>x₂</strong></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function roundToPrecision(num, digits) {
+            if (num === 0) return 0;
+            const magnitude = Math.floor(Math.log10(Math.abs(num)));
+            const scale = Math.pow(10, digits - magnitude - 1);
+            return Math.round(num * scale) / scale;
+        }
+
+        function formatScientific(num) {
+            if (num === 0) return "0";
+            if (!isFinite(num)) return "∞";
+            return num.toExponential(6);
+        }
+
+        function formatError(error) {
+            if (!isFinite(error)) return "∞";
+            if (error === 0) return "0";
+            return error.toExponential(2);
+        }
+
+        function getErrorClass(error) {
+            if (error < 1e-10) return "error-good";
+            if (error < 1e-5) return "error-ok";
+            if (error < 1e-2) return "error-warning";
+            return "error-bad";
+        }
+
+        function calculate() {
+            const a = parseFloat(document.getElementById('coef-a').value) || 1;
+            const b = parseFloat(document.getElementById('coef-b').value) || 0;
+            const c = parseFloat(document.getElementById('coef-c').value) || 1;
+            const precision = parseInt(document.getElementById('precision').value);
+            const useRationalX1 = document.getElementById('rational-x1').checked;
+            const useRationalX2 = document.getElementById('rational-x2').checked;
+
+            const discriminant = b * b - 4 * a * c;
+            
+            if (discriminant < 0) {
+                document.getElementById('results').innerHTML = '<div class="note-box" style="background:#FEE2E2;border-color:#FCA5A5;color:#991B1B;">Discriminant is negative! Please choose coefficients with real roots.</div>';
+                return;
+            }
+
+            const sqrtDisc = Math.sqrt(discriminant);
+            
+            // True solution using stable formulas
+            let trueRoot1, trueRoot2;
+            if (b >= 0) {
+                trueRoot1 = (2 * c) / (-b - sqrtDisc);
+                trueRoot2 = (-b - sqrtDisc) / (2 * a);
+            } else {
+                trueRoot1 = (-b + sqrtDisc) / (2 * a);
+                trueRoot2 = (2 * c) / (-b + sqrtDisc);
+            }
+
+            // Compute with rounding
+            const bRounded = roundToPrecision(b, precision);
+            const bSquared = roundToPrecision(bRounded * bRounded, precision);
+            const fourAC = roundToPrecision(4 * a * c, precision);
+            const discriminantRounded = roundToPrecision(bSquared - fourAC, precision);
+            const sqrtDiscRounded = roundToPrecision(Math.sqrt(discriminantRounded), precision);
+            const minusBPlusSqrt = roundToPrecision(-bRounded + sqrtDiscRounded, precision);
+            const minusBMinusSqrt = roundToPrecision(-bRounded - sqrtDiscRounded, precision);
+            const twoA = roundToPrecision(2 * a, precision);
+            const twoC = roundToPrecision(2 * c, precision);
+
+            let computedRoot1, formulaX1;
+            if (useRationalX1) {
+                computedRoot1 = roundToPrecision(twoC / minusBMinusSqrt, precision);
+                formulaX1 = "x₁ = 2c / (-b - √(b²-4ac))";
+            } else {
+                computedRoot1 = roundToPrecision(minusBPlusSqrt / twoA, precision);
+                formulaX1 = "x₁ = (-b + √(b²-4ac)) / 2a";
+            }
+
+            let computedRoot2, formulaX2;
+            if (useRationalX2) {
+                computedRoot2 = roundToPrecision(twoC / minusBPlusSqrt, precision);
+                formulaX2 = "x₂ = 2c / (-b + √(b²-4ac))";
+            } else {
+                computedRoot2 = roundToPrecision(minusBMinusSqrt / twoA, precision);
+                formulaX2 = "x₂ = (-b - √(b²-4ac)) / 2a";
+            }
+
+            const relError = (computed, truth) => {
+                if (truth === 0) return computed === 0 ? 0 : Infinity;
+                return Math.abs((computed - truth) / truth);
+            };
+
+            const error1 = relError(computedRoot1, trueRoot1);
+            const error2 = relError(computedRoot2, trueRoot2);
+
+            document.getElementById('results').innerHTML = `
+                <div class="result-card green">
+                    <h3>True Solution (Full Precision)</h3>
+                    <div class="result-grid">
+                        <div class="result-value">
+                            <span class="label">x₁ = </span>
+                            <span class="value green">${formatScientific(trueRoot1)}</span>
+                        </div>
+                        <div class="result-value">
+                            <span class="label">x₂ = </span>
+                            <span class="value green">${formatScientific(trueRoot2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-card blue">
+                    <h3>Computed Solution (with ${precision} digits precision)</h3>
+                    <div style="margin-top: 12px;">
+                        <div class="result-item">
+                            <div class="formula">${formulaX1}</div>
+                            <div class="result-grid">
+                                <div class="result-value">
+                                    <span class="label">x₁ = </span>
+                                    <span class="value blue">${formatScientific(computedRoot1)}</span>
+                                </div>
+                                <div class="result-value">
+                                    <span class="label">Rel. Error: </span>
+                                    <span class="${getErrorClass(error1)}">${formatError(error1)}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-item" style="margin-top: 12px;">
+                            <div class="formula">${formulaX2}</div>
+                            <div class="result-grid">
+                                <div class="result-value">
+                                    <span class="label">x₂ = </span>
+                                    <span class="value blue">${formatScientific(computedRoot2)}</span>
+                                </div>
+                                <div class="result-value">
+                                    <span class="label">Rel. Error: </span>
+                                    <span class="${getErrorClass(error2)}">${formatError(error2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Event listeners
+        document.getElementById('coef-a').addEventListener('input', calculate);
+        document.getElementById('coef-b').addEventListener('input', calculate);
+        document.getElementById('coef-c').addEventListener('input', calculate);
+        document.getElementById('precision').addEventListener('input', function() {
+            document.getElementById('precision-value').textContent = this.value;
+            calculate();
+        });
+        document.getElementById('rational-x1').addEventListener('change', calculate);
+        document.getElementById('rational-x2').addEventListener('change', calculate);
+
+        // Initial calculation
+        calculate();
+    </script>
+</body>
+</html>
