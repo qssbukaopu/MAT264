@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newton's Method Demo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 13px;
+        }
+        input, select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        input[type="range"] {
+            padding: 0;
+            height: 6px;
+            background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        .btn-zoom {
+            background: #4ecdc4;
+            color: white;
+        }
+        .btn-zoom:hover {
+            background: #3db8af;
+            transform: translateY(-2px);
+        }
+        .btn-pan {
+            background: #ffa726;
+            color: white;
+        }
+        .btn-pan:hover {
+            background: #fb8c00;
+            transform: translateY(-2px);
+        }
+        .pan-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            width: 150px;
+        }
+        .pan-controls button {
+            padding: 8px;
+            font-size: 16px;
+        }
+        .pan-controls .btn-center {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        .chart-wrapper {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            position: relative;
+        }
+        .chart-wrapper h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+        }
+        canvas {
+            max-height: 400px;
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+        .info-panel {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .info-panel h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+        }
+        .iteration-info {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #555;
+            overflow-x: auto;
+        }
+        .iteration-info p {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th {
+            padding: 12px 20px;
+            text-align: center;
+            border: 1px solid #d0d0d0;
+            background: linear-gradient(180deg, #667eea 0%, #5a6fd8 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        td {
+            padding: 10px 20px;
+            text-align: center;
+            border: 1px solid #d0d0d0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        tr:hover {
+            background: #f0f4ff;
+        }
+        td:first-child {
+            font-weight: 700;
+            color: #667eea;
+            background: #f5f7ff;
+        }
+        tbody tr {
+            transition: background 0.2s;
+        }
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c62828;
+            display: none;
+        }
+        @media (max-width: 900px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Newton's Method Demo</h1>
+        <p class="subtitle">Visualize the convergence process and analyze convergence rates</p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="functionInput">Function f(x):</label>
+                <input type="text" id="functionInput" value="x^2 - 2" placeholder="e.g., x^2 - 2">
+            </div>
+            <div class="control-group">
+                <label for="x0Input">Initial Point x₀:</label>
+                <input type="number" id="x0Input" value="3" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="alphaInput">Convergence Rate α:</label>
+                <input type="text" id="alphaInput" value="2" placeholder="e.g., 2 or 4/3">
+            </div>
+            <div class="control-group">
+                <label for="multiplicityInput">Root Multiplicity m:</label>
+                <input type="number" id="multiplicityInput" value="1" min="1" step="1">
+            </div>
+            <div class="control-group">
+                <label for="maxIterInput">Max Iterations:</label>
+                <input type="number" id="maxIterInput" value="10" min="1" max="50">
+            </div>
+            <div class="control-group">
+                <label for="toleranceInput">Root Accuracy (tolerance):</label>
+                <select id="toleranceInput">
+                    <option value="1e-1">10⁻¹</option>
+                    <option value="1e-2">10⁻²</option>
+                    <option value="1e-3">10⁻³</option>
+                    <option value="1e-4">10⁻⁴</option>
+                    <option value="1e-5">10⁻⁵</option>
+                    <option value="1e-6">10⁻⁶</option>
+                    <option value="1e-7">10⁻⁷</option>
+                    <option value="1e-8" selected>10⁻⁸</option>
+                    <option value="1e-9">10⁻⁹</option>
+                    <option value="1e-10">10⁻¹⁰</option>
+                    <option value="1e-11">10⁻¹¹</option>
+                    <option value="1e-12">10⁻¹²</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="manualRootInput">Manual Root x* (optional):</label>
+                <input type="number" id="manualRootInput" placeholder="Leave empty to auto-compute" step="any">
+            </div>
+            <div class="control-group">
+                <label for="zoomFactorInput">Zoom Factor: <span id="zoomFactorValue">10x</span></label>
+                <input type="range" id="zoomFactorInput" min="1" max="100" value="10" step="1" style="width: 100%;">
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="btn-primary" onclick="runNewtonMethod()">Run Newton's Method</button>
+            <button class="btn-secondary" onclick="stepIteration()">Step Forward</button>
+            <button class="btn-zoom" onclick="zoomIn()">Zoom In</button>
+            <button class="btn-zoom" onclick="zoomOut()">Zoom Out</button>
+            <div class="pan-controls">
+                <button class="btn-pan" onclick="panUp()" style="grid-column: 2; grid-row: 1;">▲</button>
+                <button class="btn-pan" onclick="panLeft()" style="grid-column: 1; grid-row: 2;">◀</button>
+                <button class="btn-pan" onclick="recenter()" style="grid-column: 2; grid-row: 2;">⊙</button>
+                <button class="btn-pan" onclick="panRight()" style="grid-column: 3; grid-row: 2;">▶</button>
+                <button class="btn-pan" onclick="panDown()" style="grid-column: 2; grid-row: 3;">▼</button>
+            </div>
+            <button class="btn-secondary" onclick="reset()">Reset</button>
+        </div>
+        
+        <div class="charts-container">
+            <div class="chart-wrapper">
+                <h3>Function Graph & Iteration Trajectory</h3>
+                <canvas id="functionChart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+                <h3>Convergence Rate: |x_{n+1} - x*| / |x_n - x*|^α</h3>
+                <canvas id="convergenceChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h3>Iteration Information</h3>
+            <div class="iteration-info" id="iterationInfo">
+                Configure parameters and click "Run Newton's Method" or "Step Forward" to start.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let functionChart, convergenceChart;
+        let iterations = [];
+        let currentStep = 0;
+        let xStar = null;
+        let zoomLevel = 1.0;
+        let panOffsetX = 0;
+        let panOffsetY = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragStartOffsetX = 0;
+        let dragStartOffsetY = 0;
+
+        function parseAlpha(alphaInput) {
+            const fractionMatch = alphaInput.trim().match(/^(\d+)\/(\d+)$/);
+            if (fractionMatch) {
+                const numerator = parseInt(fractionMatch[1]);
+                const denominator = parseInt(fractionMatch[2]);
+                return {
+                    value: numerator / denominator,
+                    numerator: numerator,
+                    denominator: denominator,
+                    isFraction: true,
+                    display: `${numerator}/${denominator}`
+                };
+            }
+            
+            try {
+                const value = math.evaluate(alphaInput);
+                if (typeof value !== 'number' || isNaN(value) || value <= 0) {
+                    return null;
+                }
+                return {
+                    value: value,
+                    isFraction: false,
+                    display: value.toFixed(4)
+                };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function computePowerRobust(base, alpha) {
+            if (Math.abs(base) < 1e-13) {
+                return NaN;
+            }
+            
+            if (alpha.isFraction) {
+                const powered = Math.pow(Math.abs(base), alpha.numerator);
+                const result = Math.pow(powered, 1 / alpha.denominator);
+                return base < 0 && alpha.numerator % 2 === 1 ? -result : result;
+            } else {
+                return Math.pow(Math.abs(base), alpha.value);
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function evaluateFunction(expr, x) {
+            try {
+                const scope = { x: x };
+                return math.evaluate(expr, scope);
+            } catch (e) {
+                throw new Error('Invalid function expression');
+            }
+        }
+
+        function evaluateDerivative(expr, x) {
+            try {
+                const h = 1e-7;
+                return (evaluateFunction(expr, x + h) - evaluateFunction(expr, x - h)) / (2 * h);
+            } catch (e) {
+                throw new Error('Cannot compute derivative');
+            }
+        }
+
+        function findRoot(expr, x0, maxIter = 100) {
+            const manualRoot = document.getElementById('manualRootInput').value;
+            
+            if (manualRoot !== '' && !isNaN(parseFloat(manualRoot))) {
+                return parseFloat(manualRoot);
+            }
+            
+            const tolerance = parseFloat(document.getElementById('toleranceInput').value);
+            let x = x0;
+            for (let i = 0; i < maxIter; i++) {
+                const fx = evaluateFunction(expr, x);
+                const fpx = evaluateDerivative(expr, x);
+                if (Math.abs(fpx) < 1e-10) break;
+                const xNew = x - fx / fpx;
+                if (Math.abs(xNew - x) < tolerance) {
+                    return xNew;
+                }
+                x = xNew;
+            }
+            return x;
+        }
+
+        function runNewtonMethod() {
+            try {
+                const expr = document.getElementById('functionInput').value;
+                const x0 = parseFloat(document.getElementById('x0Input').value);
+
+                iterations = [];
+                currentStep = 0;
+
+                xStar = findRoot(expr, x0, 100);
+                
+                if (isNaN(xStar)) {
+                    showError('Cannot compute root automatically. Please provide a manual root value.');
+                    xStar = null;
+                    return;
+                }
+
+                updateVisualization();
+                updateInfo();
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        function stepIteration() {
+            try {
+                const expr = document.getElementById('functionInput').value;
+                const maxIter = parseInt(document.getElementById('maxIterInput').value);
+
+                if (iterations.length === 0 && currentStep === 0) {
+                    if (xStar === null) {
+                        const x0 = parseFloat(document.getElementById('x0Input').value);
+                        xStar = findRoot(expr, x0, 100);
+                        
+                        if (isNaN(xStar)) {
+                            showError('Cannot compute root automatically. Please provide a manual root value.');
+                            xStar = null;
+                            return;
+                        }
+                    }
+                }
+                
+                if (xStar === null || isNaN(xStar)) {
+                    showError('Please provide a valid root before stepping.');
+                    return;
+                }
+
+                if (currentStep >= maxIter) {
+                    showError('Maximum iterations reached.');
+                    return;
+                }
+
+                let x;
+                if (iterations.length === 0) {
+                    x = parseFloat(document.getElementById('x0Input').value);
+                } else {
+                    x = iterations[iterations.length - 1].xNext;
+                }
+
+                const fx = evaluateFunction(expr, x);
+                const fpx = evaluateDerivative(expr, x);
+
+                if (Math.abs(fpx) < 1e-10) {
+                    showError('Derivative too close to zero. Cannot continue.');
+                    return;
+                }
+
+                const m = parseInt(document.getElementById('multiplicityInput').value);
+                const xNext = x - m * (fx / fpx);
+
+                iterations.push({
+                    n: iterations.length,
+                    x: x,
+                    fx: fx,
+                    fpx: fpx,
+                    xNext: xNext,
+                    tangentSlope: fpx,
+                    tangentIntercept: fx - fpx * x
+                });
+
+                currentStep = iterations.length;
+
+                if (Math.abs(xNext - x) < 1e-10) {
+                    showError('Converged! (Change in x < 1e-10)');
+                }
+
+                updateVisualization();
+                updateInfo();
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        function reset() {
+            iterations = [];
+            currentStep = 0;
+            xStar = null;
+            zoomLevel = 1.0;
+            panOffsetX = 0;
+            panOffsetY = 0;
+            updateVisualization();
+            document.getElementById('iterationInfo').innerHTML = 'Configure parameters and click "Run Newton\'s Method" or "Step Forward" to start.';
+        }
+
+        function zoomIn() {
+            const factor = parseFloat(document.getElementById('zoomFactorInput').value);
+            zoomLevel *= (1 / factor);
+            updateVisualization();
+        }
+
+        function zoomOut() {
+            const factor = parseFloat(document.getElementById('zoomFactorInput').value);
+            zoomLevel *= factor;
+            updateVisualization();
+        }
+
+        function panUp() {
+            const currentRange = getCurrentYRange();
+            panOffsetY += currentRange * 0.2;
+            updateVisualization();
+        }
+
+        function panDown() {
+            const currentRange = getCurrentYRange();
+            panOffsetY -= currentRange * 0.2;
+            updateVisualization();
+        }
+
+        function panLeft() {
+            const currentRange = getCurrentXRange();
+            panOffsetX -= currentRange * 0.2;
+            updateVisualization();
+        }
+
+        function panRight() {
+            const currentRange = getCurrentXRange();
+            panOffsetX += currentRange * 0.2;
+            updateVisualization();
+        }
+
+        function recenter() {
+            panOffsetX = 0;
+            panOffsetY = 0;
+            
+            if (iterations.length > 0) {
+                const centerX = iterations[iterations.length - 1].xNext;
+                panOffsetX = -centerX;
+            } else {
+                const x0 = parseFloat(document.getElementById('x0Input').value);
+                panOffsetX = -x0;
+            }
+            
+            updateVisualization();
+        }
+
+        function getCurrentXRange() {
+            if (iterations.length === 0) {
+                return 4 * zoomLevel;
+            }
+            const allX = iterations.map(it => it.x);
+            allX.push(iterations[iterations.length - 1].xNext);
+            const baseRange = Math.max(Math.max(...allX) - Math.min(...allX), 0.1);
+            return baseRange * zoomLevel;
+        }
+
+        function getCurrentYRange() {
+            const xRange = getCurrentXRange();
+            return xRange;
+        }
+
+        function updateVisualization() {
+            updateFunctionChart();
+            updateConvergenceChart();
+        }
+
+        function updateFunctionChart() {
+            const expr = document.getElementById('functionInput').value;
+            
+            if (iterations.length === 0 && currentStep === 0) {
+                if (functionChart) {
+                    functionChart.destroy();
+                    functionChart = null;
+                }
+                return;
+            }
+
+            let centerX, centerY, minX, maxX, minY, maxY;
+            if (iterations.length === 0) {
+                const x0 = parseFloat(document.getElementById('x0Input').value);
+                centerX = x0;
+                centerY = 0;
+                const baseRange = 4;
+                const adjustedRange = baseRange * zoomLevel;
+                minX = centerX - adjustedRange / 2 + panOffsetX;
+                maxX = centerX + adjustedRange / 2 + panOffsetX;
+                minY = centerY - adjustedRange / 2 + panOffsetY;
+                maxY = centerY + adjustedRange / 2 + panOffsetY;
+            } else {
+                const allX = iterations.map(it => it.x);
+                allX.push(iterations[iterations.length - 1].xNext);
+                centerX = iterations[iterations.length - 1].xNext;
+                
+                const baseRangeX = Math.max(Math.max(...allX) - Math.min(...allX), 0.1);
+                const adjustedRangeX = baseRangeX * zoomLevel;
+                
+                minX = centerX - adjustedRangeX / 2 + panOffsetX;
+                maxX = centerX + adjustedRangeX / 2 + panOffsetX;
+                
+                const samplePoints = 100;
+                const yValues = [];
+                for (let i = 0; i <= samplePoints; i++) {
+                    const x = minX + (maxX - minX) * i / samplePoints;
+                    try {
+                        yValues.push(evaluateFunction(expr, x));
+                    } catch (e) {
+                    }
+                }
+                
+                for (let i = 0; i < iterations.length; i++) {
+                    yValues.push(iterations[i].fx);
+                    yValues.push(0);
+                }
+                
+                if (yValues.length > 0) {
+                    const minYData = Math.min(...yValues);
+                    const maxYData = Math.max(...yValues);
+                    const yRange = Math.max(maxYData - minYData, 0.1);
+                    const yCenter = (minYData + maxYData) / 2;
+                    
+                    const adjustedRangeY = yRange * zoomLevel;
+                    minY = yCenter - adjustedRangeY / 2 + panOffsetY;
+                    maxY = yCenter + adjustedRangeY / 2 + panOffsetY;
+                } else {
+                    minY = -adjustedRangeX / 2 + panOffsetY;
+                    maxY = adjustedRangeX / 2 + panOffsetY;
+                }
+            }
+
+            const xValues = [];
+            const yValues = [];
+            const numPoints = 500;
+            for (let i = 0; i <= numPoints; i++) {
+                const x = minX + (maxX - minX) * i / numPoints;
+                xValues.push(x);
+                try {
+                    yValues.push(evaluateFunction(expr, x));
+                } catch (e) {
+                    yValues.push(null);
+                }
+            }
+
+            const datasets = [{
+                label: 'f(x)',
+                data: xValues.map((x, i) => ({ x: x, y: yValues[i] })),
+                borderColor: '#667eea',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 0,
+                order: 3
+            }];
+
+            for (let i = 0; i < iterations.length; i++) {
+                const it = iterations[i];
+                
+                datasets.push({
+                    label: `Iteration ${i}`,
+                    data: [{ x: it.x, y: it.fx }],
+                    borderColor: '#ff6b6b',
+                    backgroundColor: '#ff6b6b',
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    showLine: false,
+                    order: 1
+                });
+
+                const tangentXStart = minX;
+                const tangentXEnd = maxX;
+                const tangentYStart = it.fpx * (tangentXStart - it.x) + it.fx;
+                const tangentYEnd = it.fpx * (tangentXEnd - it.x) + it.fx;
+                
+                datasets.push({
+                    label: `Tangent ${i}`,
+                    data: [
+                        { x: tangentXStart, y: tangentYStart },
+                        { x: tangentXEnd, y: tangentYEnd }
+                    ],
+                    borderColor: '#4ecdc4',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    order: 2
+                });
+
+                datasets.push({
+                    label: `x_{${i + 1}}`,
+                    data: [{ x: it.xNext, y: 0 }],
+                    borderColor: '#95e1d3',
+                    backgroundColor: '#95e1d3',
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    showLine: false,
+                    order: 1
+                });
+
+                if (i < iterations.length - 1) {
+                    const fxNext = evaluateFunction(expr, it.xNext);
+                    datasets.push({
+                        label: `Connection ${i}`,
+                        data: [{ x: it.xNext, y: 0 }, { x: it.xNext, y: fxNext }],
+                        borderColor: '#95e1d3',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        borderDash: [3, 3],
+                        pointRadius: 0,
+                        order: 2
+                    });
+                }
+            }
+
+            const ctx = document.getElementById('functionChart').getContext('2d');
+            if (functionChart) {
+                functionChart.destroy();
+            }
+
+            functionChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'x' },
+                            min: minX,
+                            max: maxX,
+                            grid: {
+                                color: function(context) {
+                                    if (Math.abs(context.tick.value) < 1e-10) {
+                                        return '#000000';
+                                    }
+                                    return '#e0e0e0';
+                                },
+                                lineWidth: function(context) {
+                                    if (Math.abs(context.tick.value) < 1e-10) {
+                                        return 2;
+                                    }
+                                    return 1;
+                                }
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: { display: true, text: 'f(x)' },
+                            min: minY,
+                            max: maxY,
+                            grid: {
+                                color: function(context) {
+                                    if (Math.abs(context.tick.value) < 1e-10) {
+                                        return '#000000';
+                                    }
+                                    return '#e0e0e0';
+                                },
+                                lineWidth: function(context) {
+                                    if (Math.abs(context.tick.value) < 1e-10) {
+                                        return 2;
+                                    }
+                                    return 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const canvas = document.getElementById('functionChart');
+            
+            canvas.onmousedown = function(e) {
+                isDragging = true;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                dragStartOffsetX = panOffsetX;
+                dragStartOffsetY = panOffsetY;
+            };
+
+            canvas.onmousemove = function(e) {
+                if (!isDragging) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const deltaX = e.clientX - dragStartX;
+                const deltaY = e.clientY - dragStartY;
+                
+                const xRange = maxX - minX;
+                const yRange = maxY - minY;
+                
+                const chartWidth = rect.width;
+                const chartHeight = rect.height;
+                
+                const dataOffsetX = -(deltaX / chartWidth) * xRange;
+                const dataOffsetY = (deltaY / chartHeight) * yRange;
+                
+                panOffsetX = dragStartOffsetX + dataOffsetX;
+                panOffsetY = dragStartOffsetY + dataOffsetY;
+                
+                updateVisualization();
+            };
+
+            canvas.onmouseup = function() {
+                isDragging = false;
+            };
+
+            canvas.onmouseleave = function() {
+                isDragging = false;
+            };
+        }
+
+        function updateConvergenceChart() {
+            if (iterations.length === 0 || xStar === null) {
+                if (convergenceChart) {
+                    convergenceChart.destroy();
+                    convergenceChart = null;
+                }
+                return;
+            }
+
+            const alphaInput = document.getElementById('alphaInput').value;
+            const alpha = parseAlpha(alphaInput);
+            
+            if (!alpha) {
+                showError('Invalid alpha expression. Alpha must be a positive number or fraction (e.g., 2 or 4/3)');
+                return;
+            }
+            
+            const ratios = [];
+
+            for (let i = 0; i < iterations.length; i++) {
+                const it = iterations[i];
+                const errorCurrent = Math.abs(it.x - xStar);
+                const errorNext = Math.abs(it.xNext - xStar);
+                
+                const denominator = computePowerRobust(errorCurrent, alpha);
+                
+                if (!isNaN(denominator) && denominator > 1e-100) {
+                    const ratio = errorNext / denominator;
+                    if (isFinite(ratio)) {
+                        ratios.push({ x: i, y: ratio });
+                    }
+                }
+            }
+
+            const ctx = document.getElementById('convergenceChart').getContext('2d');
+            if (convergenceChart) {
+                convergenceChart.destroy();
+            }
+
+            convergenceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: `Ratio (α = ${alpha.display})`,
+                        data: ratios,
+                        borderColor: '#f38181',
+                        backgroundColor: 'rgba(243, 129, 129, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: { enabled: true }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Iteration n' },
+                            ticks: { stepSize: 1 }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: { display: true, text: 'Convergence Ratio' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateInfo() {
+            const infoDiv = document.getElementById('iterationInfo');
+            if (xStar === null || isNaN(xStar)) {
+                infoDiv.innerHTML = 'Configure parameters and provide a valid root, then click "Run Newton\'s Method" or "Step Forward" to start.';
+                return;
+            }
+
+            const tolerance = parseFloat(document.getElementById('toleranceInput').value);
+            let html = `<p style="margin-bottom: 15px;"><strong>Root x* ≈ ${xStar.toFixed(12)}</strong> (tolerance: ${tolerance.toExponential(0)})</p>`;
+            
+            if (iterations.length === 0) {
+                html += '<p>Press "Step Forward" to begin iterations.</p>';
+            } else {
+                html += '<table>';
+                html += '<thead><tr><th>n</th><th>x<sub>n</sub></th><th>|x<sub>n</sub> - x*|</th></tr></thead>';
+                html += '<tbody>';
+
+                for (let i = 0; i < iterations.length; i++) {
+                    const it = iterations[i];
+                    const error = Math.abs(it.x - xStar);
+                    html += `<tr>`;
+                    html += `<td>${i}</td>`;
+                    html += `<td>${it.x.toFixed(12)}</td>`;
+                    html += `<td>${error.toExponential(4)}</td>`;
+                    html += `</tr>`;
+                }
+
+                html += '</tbody></table>';
+            }
+
+            infoDiv.innerHTML = html;
+        }
+
+        window.onload = () => {
+            reset();
+            
+            const zoomFactorInput = document.getElementById('zoomFactorInput');
+            const zoomFactorValue = document.getElementById('zoomFactorValue');
+            
+            zoomFactorInput.addEventListener('input', function() {
+                zoomFactorValue.textContent = this.value + 'x';
+            });
+        };
+    </script>
+</body>
+</html>
