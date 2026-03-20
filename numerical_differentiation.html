@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Numerical Differentiation</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f12;
+    --surface: #13161b;
+    --surface2: #1a1e25;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #e8eaf0;
+    --muted: #7a8095;
+    --accent: #5af0c4;
+    --accent2: #5b9cf6;
+    --accent3: #f0845a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  header {
+    max-width: 860px;
+    margin: 0 auto 2.5rem;
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 1.25rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px;
+    margin-bottom: 1.75rem;
+    width: fit-content;
+  }
+
+  .tab {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--muted);
+    border: none;
+    background: transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--surface2); color: var(--accent); border: 1px solid var(--border2); }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Input grid */
+  .input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.25rem;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
+  .field label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .field input, .field select {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 5px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+
+  .compute-btn {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    padding: 9px 22px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 5px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.15s;
+    margin-bottom: 1.75rem;
+  }
+
+  .compute-btn:hover { background: rgba(90,240,196,0.08); }
+  .compute-btn:active { transform: scale(0.98); }
+
+  /* Formula bar */
+  .formula {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: var(--surface);
+    border-left: 2px solid var(--accent2);
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 1.25rem;
+    line-height: 1.7;
+  }
+
+  /* Method block */
+  .method-block {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .method-header {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    padding: 8px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .method-header .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    flex-shrink: 0;
+  }
+
+  .method-header .dot.b { background: #4ade80; }
+  .method-header .dot.c { background: #4ade80; }
+  .method-header .dot.d { background: #c084fc; }
+
+  .result-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .result-cell {
+    background: var(--surface2);
+    padding: 12px 14px;
+  }
+
+  .result-cell .rlabel {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+  }
+
+  .result-cell .rvalue {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  .result-cell .rvalue.exact { color: #ffffff; }
+  .result-cell .rvalue.num { color: var(--accent2); }
+  .result-cell .rvalue.abserr { color: var(--accent3); }
+  .result-cell .rvalue.relerr { color: #c084fc; }
+  .result-cell .rvalue.na { color: var(--muted); }
+
+  /* Points list */
+  .points-info {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    line-height: 1.9;
+  }
+
+  .points-info span {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin: 2px;
+  }
+
+  /* Error */
+  .err-msg {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--accent3);
+    padding: 10px 14px;
+    background: rgba(240,132,90,0.07);
+    border: 1px solid rgba(240,132,90,0.2);
+    border-radius: 5px;
+    margin-top: 0.5rem;
+  }
+
+  /* Hint */
+  .hint {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+  }
+
+  .hint code {
+    font-family: var(--mono);
+    color: var(--accent2);
+    font-size: 0.7rem;
+  }
+
+  /* Error analysis */
+  .ea-plot-wrap {
+    position: relative;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    user-select: none;
+  }
+  .ea-canvas { display: block; width: 100%; }
+  .ea-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--text);
+    white-space: nowrap;
+    display: none;
+  }
+  .ea-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1rem;
+  }
+  .ea-slider-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 14px;
+  }
+  .ea-slider-block .sl-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .ea-slider-block .sl-label span { color: var(--text); }
+  .ea-slider-block input[type=range] { width: 100%; margin-bottom: 4px; }
+  .ea-toggles {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .ea-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .ea-toggle input { accent-color: var(--accent2); cursor: pointer; }
+  .ea-readout {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 14px;
+    margin-bottom: 1rem;
+    min-height: 48px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .ea-readout .ro-row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .ea-readout .ro-item { display: flex; flex-direction: column; gap: 2px; }
+  .ea-readout .ro-lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .ea-readout .ro-val { color: var(--text); font-size: 0.78rem; }
+
+  @media (max-width: 560px) {
+    .result-row { grid-template-columns: 1fr 1fr; }
+    .tabs { flex-wrap: wrap; }
+    .ea-controls { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>MAT264 · Numerical Analysis</h1>
+    <p>Numerical Differentiation</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('fd')">01 · finite differences</button>
+    <button class="tab" onclick="switchTab('interp')">02 · interpolation</button>
+    <button class="tab" onclick="switchTab('rich')">03 · Richardson</button>
+    <button class="tab" onclick="switchTab('err')" style="display:none">04 · error analysis</button>
+  </div>
+
+  <!-- ======================== SECTION 1 ======================== -->
+  <div class="section active" id="sec-fd">
+    <div class="formula">
+      Forward:  f'(x) ≈ [ f(x+h) − f(x) ] / h<br>
+      Backward: f'(x) ≈ [ f(x) − f(x−h) ] / h<br>
+      Central:  f'(x) ≈ [ f(x+h) − f(x−h) ] / (2h)
+    </div>
+    <p class="hint">Enter <code>f(x)</code> using JavaScript math. Examples: <code>Math.sin(x)</code>, <code>Math.exp(x)</code>, <code>x**3 - 2*x</code>, <code>Math.log(x)</code></p>
+    <div class="input-grid">
+      <div class="field" style="grid-column: span 2;"><label>f(x)</label><input id="fd-f" value="Math.sin(x)" /></div>
+      <div class="field"><label>x</label><input id="fd-x" value="1.0" /></div>
+      <div class="field"><label>h</label><input id="fd-h" value="0.1" /></div>
+      <div class="field" style="grid-column: span 2;"><label>f '(x) exact — optional</label><input id="fd-exact" value="Math.cos(x)" placeholder="leave blank to omit errors" /></div>
+    </div>
+    <button class="compute-btn" onclick="computeFD()">compute →</button>
+    <div id="fd-results"></div>
+  </div>
+
+  <!-- ======================== SECTION 2 ======================== -->
+  <div class="section" id="sec-interp">
+    <div class="formula">
+      Build a degree-(n−1) Lagrange polynomial through n equally-spaced nodes in [x−h, x+h],<br>
+      then differentiate analytically at x.
+    </div>
+    <p class="hint">n nodes are placed uniformly from x−h to x+h. Larger n → higher-order polynomial. Beware Runge's phenomenon for large n.</p>
+    <div class="input-grid">
+      <div class="field" style="grid-column: span 2;"><label>f(x)</label><input id="ip-f" value="Math.sin(x)" /></div>
+      <div class="field"><label>x</label><input id="ip-x" value="1.0" /></div>
+      <div class="field"><label>h</label><input id="ip-h" value="0.5" /></div>
+      <div class="field"><label>n (2 – 12)</label><input id="ip-n" value="5" type="number" min="2" max="12" /></div>
+      <div class="field" style="grid-column: span 2;"><label>f '(x) exact — optional</label><input id="ip-exact" value="Math.cos(x)" placeholder="leave blank to omit errors" /></div>
+    </div>
+    <button class="compute-btn" onclick="computeInterp()">compute →</button>
+    <div id="ip-results"></div>
+  </div>
+
+  <!-- ======================== SECTION 3 ======================== -->
+  <div class="section" id="sec-rich">
+    <div class="formula">
+      Level 0: D(h)   = [ f(x+h) − f(x−h) ] / (2h)  — central difference<br>
+      Level 1: R₁(h)  = [ 4·D(h/2) − D(h) ] / 3<br>
+      Level 2: R₂(h)  = [ 16·R₁(h/4)·... ] / 15  — second Richardson level
+    </div>
+    <p class="hint">Each Richardson level cancels one more order of truncation error. The table shows D(h), D(h/2), D(h/4) and two extrapolation levels.</p>
+    <div class="input-grid">
+      <div class="field" style="grid-column: span 2;"><label>f(x)</label><input id="rc-f" value="Math.sin(x)" /></div>
+      <div class="field"><label>x</label><input id="rc-x" value="1.0" /></div>
+      <div class="field"><label>h (initial)</label><input id="rc-h" value="0.1" /></div>
+      <div class="field" style="grid-column: span 2;"><label>f '(x) exact — optional</label><input id="rc-exact" value="Math.cos(x)" placeholder="leave blank to omit errors" /></div>
+    </div>
+    <button class="compute-btn" onclick="computeRich()">compute →</button>
+    <div id="rc-results"></div>
+  <!-- ======================== SECTION 4 ======================== -->
+  <div class="section" id="sec-err">
+    <div class="formula">
+      Total error ≈ (h²/6)|f'''(x)|  +  ε_mach·|f(x)|/h &nbsp;·&nbsp; log-log plot of |error| vs h
+    </div>
+    <p class="hint">Central difference error across h from h_min to h_max. Hover to inspect, click to pin a readout. Slope lines are fitted to user-selected regions of the curve.</p>
+    <div class="input-grid">
+      <div class="field" style="grid-column: span 2;"><label>f(x)</label><input id="ea-f" value="Math.sin(x)" /></div>
+      <div class="field"><label>x</label><input id="ea-x" value="1.0" /></div>
+      <div class="field"><label>h max</label><input id="ea-hmax" value="0.1" /></div>
+      <div class="field"><label>h min</label><input id="ea-hmin" value="1e-15" /></div>
+      <div class="field" style="grid-column: span 2;"><label>f '(x) exact</label><input id="ea-exact" value="Math.cos(x)" /></div>
+    </div>
+    <button class="compute-btn" onclick="computeEA()">compute →</button>
+
+    <div class="ea-toggles">
+      <label class="ea-toggle"><input type="checkbox" id="ea-show-trunc" checked onchange="redrawEA()"> truncation slope line</label>
+      <label class="ea-toggle"><input type="checkbox" id="ea-show-round" checked onchange="redrawEA()"> round-off slope line</label>
+      <label class="ea-toggle"><input type="checkbox" id="ea-show-opt" checked onchange="redrawEA()"> optimal h marker</label>
+    </div>
+
+    <div class="ea-controls">
+      <div class="ea-slider-block">
+        <div class="sl-label">truncation fit region — leftmost <span id="ea-trunc-pct-lbl">30</span>% of points</div>
+        <input type="range" id="ea-trunc-pct" min="5" max="60" value="30" oninput="updateSliderLabel('ea-trunc-pct','ea-trunc-pct-lbl'); redrawEA()">
+      </div>
+      <div class="ea-slider-block">
+        <div class="sl-label">round-off fit region — rightmost <span id="ea-round-pct-lbl">20</span>% of points</div>
+        <input type="range" id="ea-round-pct" min="5" max="60" value="20" oninput="updateSliderLabel('ea-round-pct','ea-round-pct-lbl'); redrawEA()">
+      </div>
+    </div>
+
+    <div class="ea-readout" id="ea-readout">
+      <span style="color:var(--muted);font-size:0.7rem">hover or click the curve to inspect a point</span>
+    </div>
+
+    <div class="ea-plot-wrap" id="ea-plot-wrap">
+      <canvas class="ea-canvas" id="ea-canvas"></canvas>
+      <div class="ea-tooltip" id="ea-tooltip"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['fd','interp','rich','err'][i] === id);
+  });
+  document.querySelectorAll('.section').forEach((s, i) => {
+    s.classList.toggle('active', ['sec-fd','sec-interp','sec-rich','sec-err'][i] === 'sec-' + id);
+  });
+  if (id === 'err' && eaData) setTimeout(redrawEA, 50);
+}
+function evalF(expr, xval) {
+  const x = xval;
+  return eval(expr);
+}
+
+function fmt(v) {
+  if (v === null || v === undefined || isNaN(v)) return null;
+  if (!isFinite(v)) return v > 0 ? '+∞' : '−∞';
+  return v.toPrecision(10);
+}
+
+function fmtE(v) {
+  if (v === null || isNaN(v) || !isFinite(v)) return null;
+  return v.toExponential(4);
+}
+
+function cell(label, value, cls) {
+  const disp = value === null ? '<span class="rvalue na">—</span>' : `<span class="rvalue ${cls}">${value}</span>`;
+  return `<div class="result-cell"><div class="rlabel">${label}</div>${disp}</div>`;
+}
+
+function methodBlock(title, dotCls, exact, num) {
+  const eVal = fmt(exact);
+  const nVal = fmt(num);
+  const absErr = (exact !== null && num !== null) ? fmtE(Math.abs(exact - num)) : null;
+  const relErr = (exact !== null && exact !== 0 && num !== null) ? fmtE(Math.abs((exact - num) / exact)) : null;
+  return `
+    <div class="method-block">
+      <div class="method-header"><div class="dot ${dotCls}"></div>${title}</div>
+      <div class="result-row">
+        ${cell('exact f\'(x)', eVal, 'exact')}
+        ${cell('numerical', nVal, 'num')}
+        ${cell('absolute error', absErr, 'abserr')}
+        ${cell('relative error', relErr, 'relerr')}
+      </div>
+    </div>`;
+}
+
+function computeFD() {
+  const el = document.getElementById('fd-results');
+  try {
+    const fExpr = document.getElementById('fd-f').value;
+    const x = parseFloat(document.getElementById('fd-x').value);
+    const h = parseFloat(document.getElementById('fd-h').value);
+    const eExpr = document.getElementById('fd-exact').value.trim();
+    const exact = eExpr ? evalF(eExpr, x) : null;
+
+    const fwd = (evalF(fExpr, x + h) - evalF(fExpr, x)) / h;
+    const bwd = (evalF(fExpr, x) - evalF(fExpr, x - h)) / h;
+    const ctr = (evalF(fExpr, x + h) - evalF(fExpr, x - h)) / (2 * h);
+
+    el.innerHTML =
+      methodBlock('forward difference', '', exact, fwd) +
+      methodBlock('backward difference', 'b', exact, bwd) +
+      methodBlock('central difference', 'c', exact, ctr);
+  } catch(e) {
+    el.innerHTML = `<div class="err-msg">error: ${e.message}</div>`;
+  }
+}
+
+function computeInterp() {
+  const el = document.getElementById('ip-results');
+  try {
+    const fExpr = document.getElementById('ip-f').value;
+    const x     = parseFloat(document.getElementById('ip-x').value);
+    const h     = parseFloat(document.getElementById('ip-h').value);
+    const n     = Math.max(2, Math.min(12, parseInt(document.getElementById('ip-n').value)));
+    const eExpr = document.getElementById('ip-exact').value.trim();
+    const exact = eExpr ? evalF(eExpr, x) : null;
+
+    const xi = [], fi = [];
+    for (let i = 0; i < n; i++) {
+      const t = (x - h) + (2 * h) * i / (n - 1);
+      xi.push(t);
+      fi.push(evalF(fExpr, t));
+    }
+
+    // Barycentric weights
+    const w = new Array(n).fill(1);
+    for (let j = 0; j < n; j++)
+      for (let k = 0; k < n; k++)
+        if (k !== j) w[j] /= (xi[j] - xi[k]);
+
+    let atNode = -1;
+    for (let j = 0; j < n; j++)
+      if (Math.abs(x - xi[j]) < 1e-12) { atNode = j; break; }
+
+    let deriv = 0;
+    if (atNode >= 0) {
+      const m = atNode;
+      for (let k = 0; k < n; k++)
+        if (k !== m) deriv += (w[k] / w[m]) * (fi[k] - fi[m]) / (xi[m] - xi[k]);
+    } else {
+      const num    = xi.reduce((s, t, k) => s + w[k] * fi[k] / (x - t), 0);
+      const denom  = xi.reduce((s, t, k) => s + w[k]        / (x - t), 0);
+      const dnum   = xi.reduce((s, t, k) => s - w[k] * fi[k] / (x - t) ** 2, 0);
+      const ddenom = xi.reduce((s, t, k) => s - w[k]        / (x - t) ** 2, 0);
+      deriv = (dnum * denom - num * ddenom) / (denom * denom);
+    }
+
+    const ptsHtml = xi.map((t, i) =>
+      `<span>(${t.toFixed(4)}, ${fi[i].toFixed(6)})</span>`
+    ).join('');
+
+    el.innerHTML =
+      `<div class="points-info" style="margin-bottom:0.75rem">${n} nodes: ${ptsHtml}</div>` +
+      methodBlock(`Lagrange polynomial derivative (n = ${n})`, 'd', exact, deriv);
+
+  } catch(e) {
+    el.innerHTML = `<div class="err-msg">error: ${e.message}</div>`;
+  }
+}
+
+function computeRich() {
+  const el = document.getElementById('rc-results');
+  try {
+    const fExpr = document.getElementById('rc-f').value;
+    const x = parseFloat(document.getElementById('rc-x').value);
+    const h = parseFloat(document.getElementById('rc-h').value);
+    const eExpr = document.getElementById('rc-exact').value.trim();
+    const exact = eExpr ? evalF(eExpr, x) : null;
+
+    const D = s => (evalF(fExpr, x + s) - evalF(fExpr, x - s)) / (2 * s);
+
+    const D0  = D(h);
+    const D1  = D(h / 2);
+    const D2  = D(h / 4);
+    const R1  = (4 * D1 - D0) / 3;          // cancels O(h²)
+    const R1b = (4 * D2 - D1) / 3;          // same level but with h/2
+    const R2  = (16 * R1b - R1) / 15;       // cancels O(h⁴)
+
+    el.innerHTML =
+      methodBlock(`central diff  D(h = ${h})`, '', exact, D0) +
+      methodBlock(`central diff  D(h/2 = ${h/2})`, 'b', exact, D1) +
+      methodBlock(`central diff  D(h/4 = ${h/4})`, 'b', exact, D2) +
+      methodBlock('Richardson level 1 — R₁(h)', 'c', exact, R1) +
+      methodBlock('Richardson level 2 — R₂(h)', 'd', exact, R2);
+  } catch(e) {
+    el.innerHTML = `<div class="err-msg">error: ${e.message}</div>`;
+  }
+}
+
+// ===================== ERROR ANALYSIS =====================
+let eaData = null; // { hs, errors, numerics, exact }
+let eaPinned = null;
+
+function updateSliderLabel(sliderId, labelId) {
+  document.getElementById(labelId).textContent = document.getElementById(sliderId).value;
+}
+
+function computeEA() {
+  try {
+    const fExpr  = document.getElementById('ea-f').value;
+    const x      = parseFloat(document.getElementById('ea-x').value);
+    const hmax   = parseFloat(document.getElementById('ea-hmax').value);
+    const hmin   = parseFloat(document.getElementById('ea-hmin').value);
+    const eExpr  = document.getElementById('ea-exact').value.trim();
+    if (!eExpr) { alert('Exact derivative is required for error analysis.'); return; }
+    const exact  = evalF(eExpr, x);
+    const N = 80;
+    const hs = [], errors = [], numerics = [];
+    for (let i = 0; i < N; i++) {
+      const h = Math.pow(10, Math.log10(hmin) + (Math.log10(hmax) - Math.log10(hmin)) * i / (N - 1));
+      const num = (evalF(fExpr, x + h) - evalF(fExpr, x - h)) / (2 * h);
+      const err = Math.abs(num - exact);
+      hs.push(h); numerics.push(num); errors.push(err);
+    }
+    eaData = { hs, errors, numerics, exact, fExpr, x, eExpr };
+    eaPinned = null;
+    setTimeout(redrawEA, 30);
+  } catch(e) {
+    document.getElementById('ea-readout').innerHTML = `<span style="color:var(--accent3)">error: ${e.message}</span>`;
+  }
+}
+
+function linFit(xs, ys) {
+  // Least squares fit y = a + b*x in log-log space
+  const n = xs.length;
+  let sx=0, sy=0, sxx=0, sxy=0;
+  for (let i=0; i<n; i++) {
+    const lx = Math.log10(xs[i]), ly = Math.log10(ys[i]);
+    if (!isFinite(lx) || !isFinite(ly)) continue;
+    sx += lx; sy += ly; sxx += lx*lx; sxy += lx*ly;
+  }
+  const b = (n*sxy - sx*sy) / (n*sxx - sx*sx);
+  const a = (sy - b*sx) / n;
+  return { a, b }; // log10(y) = a + b*log10(x)
+}
+
+function redrawEA() {
+  if (!eaData) return;
+  const { hs, errors } = eaData;
+  const canvas = document.getElementById('ea-canvas');
+  const wrap   = document.getElementById('ea-plot-wrap');
+  const W = Math.max(wrap.clientWidth || 0, wrap.offsetWidth || 0, 700);
+  const H = Math.round(W * 0.55);
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const pad = { top: 30, right: 30, bottom: 50, left: 70 };
+  const pw = W - pad.left - pad.right;
+  const ph = H - pad.top  - pad.bottom;
+
+  // log10 ranges
+  const validErr = errors.filter(e => e > 0 && isFinite(e));
+  if (!validErr.length) return;
+  const lhMin = Math.log10(Math.min(...hs));
+  const lhMax = Math.log10(Math.max(...hs));
+  const leMin = Math.floor(Math.log10(Math.min(...validErr))) - 1;
+  const leMax = Math.ceil(Math.log10(Math.max(...validErr))) + 1;
+
+  const tx = lh => pad.left + (lh - lhMin) / (lhMax - lhMin) * pw;
+  const ty = le => pad.top  + (leMax - le)  / (leMax - leMin) * ph;
+
+  // Background
+  ctx.fillStyle = '#13161b';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let lh = Math.ceil(lhMin); lh <= Math.floor(lhMax); lh++) {
+    ctx.beginPath(); ctx.moveTo(tx(lh), pad.top); ctx.lineTo(tx(lh), pad.top + ph); ctx.stroke();
+  }
+  for (let le = Math.ceil(leMin); le <= Math.floor(leMax); le++) {
+    ctx.beginPath(); ctx.moveTo(pad.left, ty(le)); ctx.lineTo(pad.left + pw, ty(le)); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad.left, pad.top, pw, ph);
+
+  // Axis labels
+  ctx.fillStyle = '#7a8095';
+  ctx.font = '11px IBM Plex Mono, monospace';
+  ctx.textAlign = 'center';
+  for (let lh = Math.ceil(lhMin); lh <= Math.floor(lhMax); lh++) {
+    ctx.fillText('10' + superscript(lh), tx(lh), pad.top + ph + 18);
+  }
+  ctx.textAlign = 'right';
+  for (let le = Math.ceil(leMin); le <= Math.floor(leMax); le++) {
+    ctx.fillText('10' + superscript(le), pad.left - 8, ty(le) + 4);
+  }
+  ctx.save();
+  ctx.translate(14, pad.top + ph/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center';
+  ctx.fillText('|error|', 0, 0);
+  ctx.restore();
+  ctx.textAlign = 'center';
+  ctx.fillText('h', pad.left + pw/2, H - 6);
+
+  // Slope lines
+  const truncPct = parseInt(document.getElementById('ea-trunc-pct').value) / 100;
+  const roundPct = parseInt(document.getElementById('ea-round-pct').value) / 100;
+  const showTrunc = document.getElementById('ea-show-trunc').checked;
+  const showRound = document.getElementById('ea-show-round').checked;
+  const showOpt   = document.getElementById('ea-show-opt').checked;
+
+  const validPts = hs.map((h,i) => ({h, e: errors[i]})).filter(p => p.e > 0 && isFinite(p.e));
+  const nv = validPts.length;
+
+  if (showTrunc && nv > 4) {
+    const sub = validPts.slice(0, Math.max(2, Math.round(nv * truncPct)));
+    const { a, b } = linFit(sub.map(p=>p.h), sub.map(p=>p.e));
+    drawSlopeLine(ctx, a, b, lhMin, lhMax, leMin, leMax, tx, ty, '#5b9cf6', `slope ${b.toFixed(2)}`);
+  }
+  if (showRound && nv > 4) {
+    const sub = validPts.slice(Math.max(0, nv - Math.round(nv * roundPct)));
+    const { a, b } = linFit(sub.map(p=>p.h), sub.map(p=>p.e));
+    drawSlopeLine(ctx, a, b, lhMin, lhMax, leMin, leMax, tx, ty, '#c084fc', `slope ${b.toFixed(2)}`);
+  }
+
+  // Optimal h marker
+  const minErrIdx = errors.reduce((mi, e, i) => (isFinite(e) && e > 0 && e < (errors[mi]||Infinity)) ? i : mi, 0);
+  if (showOpt && isFinite(errors[minErrIdx]) && errors[minErrIdx] > 0) {
+    const ox = tx(Math.log10(hs[minErrIdx]));
+    ctx.strokeStyle = '#f0845a';
+    ctx.setLineDash([4, 3]);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ox, pad.top); ctx.lineTo(ox, pad.top + ph); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f0845a';
+    ctx.font = '10px IBM Plex Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('h_opt ≈ ' + hs[minErrIdx].toExponential(1), ox + 4, pad.top + 14);
+  }
+
+  // Error curve
+  ctx.strokeStyle = '#5af0c4';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  let started = false;
+  for (let i = 0; i < hs.length; i++) {
+    const e = errors[i];
+    if (!e || !isFinite(e) || e <= 0) { started = false; continue; }
+    const px = tx(Math.log10(hs[i]));
+    const py = ty(Math.log10(e));
+    if (!started) { ctx.moveTo(px, py); started = true; }
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Dots on curve
+  for (let i = 0; i < hs.length; i++) {
+    const e = errors[i];
+    if (!e || !isFinite(e) || e <= 0) continue;
+    const px = tx(Math.log10(hs[i]));
+    const py = ty(Math.log10(e));
+    ctx.beginPath();
+    ctx.arc(px, py, 2.5, 0, 2*Math.PI);
+    ctx.fillStyle = '#5af0c4';
+    ctx.fill();
+  }
+
+  // Pinned point highlight
+  if (eaPinned !== null) {
+    const i = eaPinned;
+    const e = errors[i];
+    if (e > 0 && isFinite(e)) {
+      const px = tx(Math.log10(hs[i]));
+      const py = ty(Math.log10(e));
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, 2*Math.PI);
+      ctx.strokeStyle = '#f0845a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
+  // Store plot geometry for mouse events
+  canvas._plotMeta = { pad, pw, ph, lhMin, lhMax, leMin, leMax, tx, ty, W, H };
+}
+
+function drawSlopeLine(ctx, a, b, lhMin, lhMax, leMin, leMax, tx, ty, color, label) {
+  const x1 = lhMin, y1 = a + b * lhMin;
+  const x2 = lhMax, y2 = a + b * lhMax;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.globalAlpha = 0.75;
+  ctx.beginPath();
+  ctx.moveTo(tx(x1), ty(y1));
+  ctx.lineTo(tx(x2), ty(y2));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = color;
+  ctx.font = '10px IBM Plex Mono, monospace';
+  ctx.textAlign = 'left';
+  const midX = tx((x1+x2)/2), midY = ty((y1+y2)/2);
+  ctx.fillText(label, midX + 4, midY - 4);
+  ctx.restore();
+}
+
+function superscript(n) {
+  const map = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+  return String(n).split('').map(c => map[c]||c).join('');
+}
+
+function eaNearestIdx(mouseX, canvas) {
+  if (!eaData || !canvas._plotMeta) return -1;
+  const { pad, pw, lhMin, lhMax } = canvas._plotMeta;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const cx = (mouseX - rect.left) * scaleX;
+  let best = -1, bestDist = Infinity;
+  eaData.hs.forEach((h, i) => {
+    const px = pad.left + (Math.log10(h) - lhMin) / (lhMax - lhMin) * pw;
+    const d = Math.abs(cx - px);
+    if (d < bestDist) { bestDist = d; best = i; }
+  });
+  return bestDist < 20 ? best : -1;
+}
+
+function showReadout(i) {
+  if (!eaData || i < 0) return;
+  const { hs, errors, numerics, exact } = eaData;
+  const h = hs[i], err = errors[i], num = numerics[i];
+  const rel = exact !== 0 ? err / Math.abs(exact) : null;
+  document.getElementById('ea-readout').innerHTML = `
+    <div class="ro-row">
+      <div class="ro-item"><span class="ro-lbl">h</span><span class="ro-val">${h.toExponential(4)}</span></div>
+      <div class="ro-item"><span class="ro-lbl">numerical f'(x)</span><span class="ro-val" style="color:#5b9cf6">${num.toPrecision(10)}</span></div>
+      <div class="ro-item"><span class="ro-lbl">exact f'(x)</span><span class="ro-val" style="color:#fff">${exact.toPrecision(10)}</span></div>
+      <div class="ro-item"><span class="ro-lbl">absolute error</span><span class="ro-val" style="color:#f0845a">${err.toExponential(4)}</span></div>
+      <div class="ro-item"><span class="ro-lbl">relative error</span><span class="ro-val" style="color:#c084fc">${rel !== null ? rel.toExponential(4) : '—'}</span></div>
+    </div>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('ea-canvas');
+  const tooltip = document.getElementById('ea-tooltip');
+
+  canvas.addEventListener('mousemove', e => {
+    const i = eaNearestIdx(e.clientX, canvas);
+    if (i < 0) { tooltip.style.display = 'none'; return; }
+    const { hs, errors } = eaData;
+    tooltip.style.display = 'block';
+    const rect = canvas.getBoundingClientRect();
+    tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+    tooltip.style.top  = (e.clientY - rect.top  - 10) + 'px';
+    tooltip.textContent = `h = ${hs[i].toExponential(3)}   |err| = ${errors[i].toExponential(3)}`;
+    if (eaPinned === null) showReadout(i);
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+    if (eaPinned === null)
+      document.getElementById('ea-readout').innerHTML = '<span style="color:var(--muted);font-size:0.7rem">hover or click the curve to inspect a point</span>';
+  });
+
+  canvas.addEventListener('click', e => {
+    const i = eaNearestIdx(e.clientX, canvas);
+    if (i < 0) return;
+    eaPinned = (eaPinned === i) ? null : i;
+    showReadout(i);
+    redrawEA();
+  });
+
+  window.addEventListener('resize', () => { if (eaData) redrawEA(); });
+});
+</script>
+</body>
+</html>
